@@ -15,7 +15,10 @@ public class RewindManager : MonoBehaviour
     private float saveInterval = 0.25f;
     private float timeElapsed = 0f;
 
-    private Dictionary<ObjectSaver, TypeDataPair[]> dict;
+    private int queueLength = 4 * 5;
+
+
+    private Queue<Dictionary<ObjectSaver, TypeDataPair[]>> _queue;
     
     private void Awake()
     {
@@ -28,7 +31,8 @@ public class RewindManager : MonoBehaviour
             Instance = this;
         
         ObjectsToSave = new List<ObjectSaver>();
-        dict = new Dictionary<ObjectSaver, TypeDataPair[]>();
+        _queue = new Queue<Dictionary<ObjectSaver, TypeDataPair[]>>(queueLength);
+        
     }
 
     private void Update()
@@ -36,21 +40,28 @@ public class RewindManager : MonoBehaviour
         if (timeElapsed >= saveInterval)
         {
             timeElapsed = 0;
-            //Save();
+            Save();
         }
         else
         {
             timeElapsed += Time.deltaTime;
         }
+        
     }
 
     [Button()]
     private void Save()
     {
+        Dictionary<ObjectSaver, TypeDataPair[]> dict = new Dictionary<ObjectSaver, TypeDataPair[]>();
         foreach (var objectSaver in ObjectsToSave)
         {
             dict[objectSaver] = objectSaver.GetDataToSave();
         }
+
+        if (_queue.Count >= queueLength)
+            _queue.Dequeue();
+        
+        _queue.Enqueue(dict);
     }
 
     [Button()]
@@ -58,6 +69,7 @@ public class RewindManager : MonoBehaviour
     {
         foreach (var objectSaver in ObjectsToSave)
         {
+            var dict = _queue.Peek();
             objectSaver.LoadData(dict[objectSaver]);
         }
     }
